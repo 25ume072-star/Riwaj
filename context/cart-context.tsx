@@ -112,7 +112,7 @@ const { data } = await supabase
 .eq("user_id", user.id)
 
 if(data){
-setItems([...data.map(mapCartItem)])
+setItems(data.map(mapCartItem))
 }
 
 }else{
@@ -138,10 +138,12 @@ setUser(session?.user ?? null)
 
 
 /* ------------------------------------------------ */
-/* LOGIN CART SYNC */
+/* LOGIN CART SYNC (FIXED) */
 /* ------------------------------------------------ */
 
 if(event === "SIGNED_IN" && session?.user){
+
+setTimeout(async ()=>{
 
 try{
 
@@ -183,6 +185,8 @@ setItems(data.map(mapCartItem))
 }catch(err){
 console.error("Error syncing cart on sign-in:", err)
 }
+
+},500)
 
 }
 
@@ -245,6 +249,7 @@ onConflict:"user_id,product_id,size,color"
 })
 .select("*, products(*)")
 .single()
+
 if(error){
 console.error("Error adding item to server cart:", error)
 }
