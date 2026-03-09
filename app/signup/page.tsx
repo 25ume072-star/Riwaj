@@ -394,12 +394,12 @@ export default function SignupPage() {
       <div className="hidden lg:block lg:w-1/2 relative">
 
         <Image
-          src="https://images.unsplash.com/photo-1594463750939-ebb28c3f7f75?w=1200&h=1600&fit=crop"
-          alt="Ethnic wear"
-          fill
-          className="object-cover"
-          priority
-        />
+         src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1200&h=1600&fit=crop"
+         alt="Rajasthani bridal ethnic wear"
+         fill
+         className="object-cover"
+         priority
+       />
 
       </div>
 
