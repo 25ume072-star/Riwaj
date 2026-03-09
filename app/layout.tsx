@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/react"
 import { CartProvider } from "@/context/cart-context"
 import { Toaster } from "sonner"
+import Script from "next/script"
 import "./globals.css"
 
 
@@ -124,6 +125,12 @@ export default function RootLayout({
           text-foreground
         `}
       >
+
+        {/* Razorpay Checkout Script */}
+        <Script
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="beforeInteractive"
+        />
 
         <CartProvider>
 

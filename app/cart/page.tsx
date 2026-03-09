@@ -34,6 +34,10 @@ export default function CartPage() {
     return price.toLocaleString("en-IN")
   }
 
+  /* -------------------------------- */
+  /* Razorpay Checkout */
+  /* -------------------------------- */
+
   const handleCheckout = async () => {
 
     if(items.length === 0) return
@@ -42,15 +46,51 @@ export default function CartPage() {
 
     try{
 
-      console.log("Proceeding to checkout",items)
+      const res = await fetch("/api/create-order",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          amount: finalTotal
+        })
+      })
 
-      alert("Checkout integration coming next (Razorpay)")
+      const order = await res.json()
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: "RIWAJ",
+        description: "Ethnic Wear Purchase",
+        order_id: order.id,
+
+        handler: function (response:any){
+
+          alert("Payment Successful 🎉")
+
+          console.log("Payment Response:",response)
+
+        },
+
+        theme:{
+          color:"#7f1d1d"
+        }
+
+      }
+
+      const rzp = new (window as any).Razorpay(options)
+
+      rzp.open()
 
     }catch(err){
       console.error(err)
+      alert("Payment failed")
     }
 
     setCheckingOut(false)
+
   }
 
 
@@ -134,7 +174,6 @@ export default function CartPage() {
                   className="flex gap-4 p-4 bg-card border border-border rounded-sm"
                 >
 
-                  {/* Image */}
                   <Link
                     href={`/products/${item.productId}`}
                     className="relative w-24 h-32 flex-shrink-0 bg-muted rounded-sm overflow-hidden"
@@ -170,10 +209,8 @@ export default function CartPage() {
                     </div>
 
 
-                    {/* Actions */}
                     <div className="flex items-center justify-between mt-4">
 
-                      {/* Quantity */}
                       <div className="flex items-center gap-2">
 
                         <button
@@ -197,7 +234,6 @@ export default function CartPage() {
                       </div>
 
 
-                      {/* Remove */}
                       <button
                         onClick={()=>removeItem(cartKey)}
                         className="flex items-center gap-1 text-sm hover:text-destructive"
