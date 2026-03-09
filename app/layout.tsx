@@ -24,7 +24,7 @@ const inter = Inter({
 
 
 
-/* Metadata (SEO + Social Sharing) */
+/* Metadata */
 
 export const metadata: Metadata = {
   title: {
@@ -47,11 +47,9 @@ export const metadata: Metadata = {
   ],
 
   authors: [{ name: "RIWAJ" }],
-
   creator: "RIWAJ",
 
   metadataBase: new URL("https://riwaj.vercel.app"),
-
 
   openGraph: {
     title: "RIWAJ - The Grace of Rajasthan",
@@ -71,7 +69,6 @@ export const metadata: Metadata = {
     type: "website"
   },
 
-
   twitter: {
     card: "summary_large_image",
     title: "RIWAJ - The Grace of Rajasthan",
@@ -79,7 +76,6 @@ export const metadata: Metadata = {
       "Luxury Rajasthani ethnic wear inspired by royal heritage.",
     images: ["/og-image.png"]
   },
-
 
   icons: {
     icon: [
@@ -99,7 +95,6 @@ export const metadata: Metadata = {
     apple: "/apple-icon.png"
   },
 
-
   viewport: {
     width: "device-width",
     initialScale: 1
@@ -115,11 +110,10 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-    >
+    <html lang="en" suppressHydrationWarning>
+
       <body
         className={`
           ${cormorant.variable}
@@ -132,15 +126,19 @@ export default function RootLayout({
       >
 
         <CartProvider>
+
           {children}
+
+          {/* Toast notifications */}
+          <Toaster position="top-right" richColors />
+
         </CartProvider>
 
-        {/* Cart Popup Toast */}
-        <Toaster position="top-right" richColors />
-
+        {/* Vercel analytics */}
         <Analytics />
 
       </body>
+
     </html>
   )
 }
