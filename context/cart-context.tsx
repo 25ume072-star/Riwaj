@@ -143,6 +143,8 @@ setUser(session?.user ?? null)
 
 if(event === "SIGNED_IN" && session?.user){
 
+try{
+
 const saved = localStorage.getItem("riwaj_cart")
 
 if(saved){
@@ -167,18 +169,19 @@ localStorage.removeItem("riwaj_cart")
 
 }
 
-/* clear old cart state */
-setItems([])
-
-/* reload cart from database */
-const { data } = await supabase
+const { data, error } = await supabase
 .from("cart_items")
 .select("*, products(*)")
 .eq("user_id", session.user.id)
 
-if(data){
-const mapped = data.map(mapCartItem)
-setItems([...mapped])
+if(error){
+console.error("Error loading cart after sign-in:", error)
+}else if(data){
+setItems(data.map(mapCartItem))
+}
+
+}catch(err){
+console.error("Error syncing cart on sign-in:", err)
 }
 
 }
@@ -229,7 +232,7 @@ product.image_url || product.images?.[0] || "/placeholder.jpg"
 
 if(user){
 
-const { data } = await supabase
+const { data, error } = await supabase
 .from("cart_items")
 .upsert({
 user_id: user.id,
@@ -242,6 +245,9 @@ onConflict:"user_id,product_id,size,color"
 })
 .select("*, products(*)")
 .single()
+if(error){
+console.error("Error adding item to server cart:", error)
+}
 
 if(data){
 

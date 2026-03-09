@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
@@ -19,13 +20,18 @@ import {
   Tag
 } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
+import { createClient } from "@/lib/supabase/client"
+import type { Order, OrderItem } from "@/lib/database.types"
 
 export default function CartPage() {
 
-  const { items, removeItem, updateQuantity, totalItems, totalPrice, clearCart, isLoading } = useCart()
+  const { items, removeItem, updateQuantity, totalItems, totalPrice, clearCart, isLoading, user } = useCart()
 
   const [promoCode, setPromoCode] = useState("")
   const [checkingOut, setCheckingOut] = useState(false)
+
+  const router = useRouter()
+  const supabase = createClient()
 
   const shipping = totalPrice >= 2999 ? 0 : 199
   const finalTotal = totalPrice + shipping
@@ -34,59 +40,70 @@ export default function CartPage() {
     return price.toLocaleString("en-IN")
   }
 
-  /* -------------------------------- */
-  /* Razorpay Checkout */
-  /* -------------------------------- */
-
   const handleCheckout = async () => {
 
     if(items.length === 0) return
+
+    if(!user){
+      router.push("/login?redirect=/cart")
+      return
+    }
 
     setCheckingOut(true)
 
     try{
 
-      const res = await fetch("/api/create-order",{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json"
-        },
-        body:JSON.stringify({
-          amount: finalTotal
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          user_id: user.id,
+          subtotal: totalPrice,
+          shipping,
+          discount: 0,
+          total: finalTotal,
+          promo_code: promoCode || null,
+          payment_method: "cod",
+          payment_status: "pending",
+          status: "pending"
         })
-      })
+        .select()
+        .single()
 
-      const order = await res.json()
-
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: order.amount,
-        currency: order.currency,
-        name: "RIWAJ",
-        description: "Ethnic Wear Purchase",
-        order_id: order.id,
-
-        handler: function (response:any){
-
-          alert("Payment Successful 🎉")
-
-          console.log("Payment Response:",response)
-
-        },
-
-        theme:{
-          color:"#7f1d1d"
-        }
-
+      if(orderError || !order){
+        console.error(orderError)
+        alert("Could not create order. Please try again.")
+        setCheckingOut(false)
+        return
       }
 
-      const rzp = new (window as any).Razorpay(options)
+      const orderItems: Omit<OrderItem,"id" | "created_at">[] = items.map(item=>({
+        order_id: order.id,
+        product_id: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        size: item.size ?? null,
+        color: item.color ?? null
+      }))
 
-      rzp.open()
+      const { error: itemsError } = await supabase
+        .from("order_items")
+        .insert(orderItems as any)
+
+      if(itemsError){
+        console.error(itemsError)
+        alert("Order created but items could not be saved. Please contact support.")
+        setCheckingOut(false)
+        return
+      }
+
+      await clearCart()
+
+      alert("Order placed successfully!")
+      router.push("/")
 
     }catch(err){
       console.error(err)
-      alert("Payment failed")
+      alert("Something went wrong while placing your order.")
     }
 
     setCheckingOut(false)
@@ -163,16 +180,12 @@ export default function CartPage() {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
 
-            {items.map(item => {
+            {items.map(item => (
 
-              const cartKey = `${item.id}-${item.size}-${item.color}`
-
-              return (
-
-                <div
-                  key={cartKey}
-                  className="flex gap-4 p-4 bg-card border border-border rounded-sm"
-                >
+              <div
+                key={item.id}
+                className="flex gap-4 p-4 bg-card border border-border rounded-sm"
+              >
 
                   <Link
                     href={`/products/${item.productId}`}
@@ -214,7 +227,7 @@ export default function CartPage() {
                       <div className="flex items-center gap-2">
 
                         <button
-                          onClick={()=>updateQuantity(cartKey,Math.max(1,item.quantity-1))}
+                          onClick={()=>updateQuantity(item.id,Math.max(1,item.quantity-1))}
                           className="w-8 h-8 border rounded-sm flex items-center justify-center"
                         >
                           <Minus className="h-3 w-3"/>
@@ -225,7 +238,7 @@ export default function CartPage() {
                         </span>
 
                         <button
-                          onClick={()=>updateQuantity(cartKey,item.quantity+1)}
+                          onClick={()=>updateQuantity(item.id,item.quantity+1)}
                           className="w-8 h-8 border rounded-sm flex items-center justify-center"
                         >
                           <Plus className="h-3 w-3"/>
@@ -235,7 +248,7 @@ export default function CartPage() {
 
 
                       <button
-                        onClick={()=>removeItem(cartKey)}
+                        onClick={()=>removeItem(item.id)}
                         className="flex items-center gap-1 text-sm hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4"/>
@@ -246,11 +259,9 @@ export default function CartPage() {
 
                   </div>
 
-                </div>
+              </div>
 
-              )
-
-            })}
+            ))}
 
 
             <div className="flex justify-between pt-4">
