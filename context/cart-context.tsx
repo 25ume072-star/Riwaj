@@ -69,9 +69,9 @@ const [isLoading,setIsLoading] = useState(true)
 const mapCartItem = (item: CartItemWithProduct): CartItem => ({
 id: item.id,
 productId: item.product_id,
-name: item.products.name,
-price: item.products.price,
-image: item.products.image_url || item.products.images?.[0] || "",
+name: item.products?.name || "",
+price: item.products?.price || 0,
+image: item.products?.image_url || item.products?.images?.[0] || "/placeholder.jpg",
 quantity: item.quantity,
 size: item.size || undefined,
 color: item.color || undefined
@@ -112,7 +112,7 @@ const { data } = await supabase
 .eq("user_id", user.id)
 
 if(data){
-setItems(data.map(mapCartItem))
+setItems([...data.map(mapCartItem)])
 }
 
 }else{
@@ -136,6 +136,10 @@ async (event: AuthChangeEvent, session: Session | null) => {
 setUser(session?.user ?? null)
 
 
+
+/* ------------------------------------------------ */
+/* LOGIN CART SYNC */
+/* ------------------------------------------------ */
 
 if(event === "SIGNED_IN" && session?.user){
 
@@ -163,13 +167,18 @@ localStorage.removeItem("riwaj_cart")
 
 }
 
+/* clear old cart state */
+setItems([])
+
+/* reload cart from database */
 const { data } = await supabase
 .from("cart_items")
 .select("*, products(*)")
 .eq("user_id", session.user.id)
 
 if(data){
-setItems(data.map(mapCartItem))
+const mapped = data.map(mapCartItem)
+setItems([...mapped])
 }
 
 }
@@ -197,9 +206,7 @@ return ()=> subscription.unsubscribe()
 useEffect(()=>{
 
 if(!user && !isLoading){
-
 localStorage.setItem("riwaj_cart", JSON.stringify(items))
-
 }
 
 },[items,user,isLoading])
@@ -218,7 +225,7 @@ quantity: number = 1
 )=>{
 
 const image =
-product.image_url || product.images?.[0] || ""
+product.image_url || product.images?.[0] || "/placeholder.jpg"
 
 if(user){
 
@@ -304,7 +311,7 @@ color
 
 }
 
-},[user])
+},[user,supabase])
 
 
 
@@ -320,7 +327,7 @@ await supabase.from("cart_items").delete().eq("id",id)
 
 setItems(prev => prev.filter(item => item.id !== id))
 
-},[user])
+},[user,supabase])
 
 
 
@@ -353,7 +360,7 @@ item.id === id
 )
 )
 
-},[user,removeItem])
+},[user,removeItem,supabase])
 
 
 
@@ -372,7 +379,7 @@ await supabase
 
 setItems([])
 
-},[user])
+},[user,supabase])
 
 
 

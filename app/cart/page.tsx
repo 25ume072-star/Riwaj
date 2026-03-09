@@ -34,7 +34,6 @@ export default function CartPage() {
     return price.toLocaleString("en-IN")
   }
 
-  // Checkout placeholder (ready for Razorpay)
   const handleCheckout = async () => {
 
     if(items.length === 0) return
@@ -43,7 +42,6 @@ export default function CartPage() {
 
     try{
 
-      // Here we will later call Razorpay order API
       console.log("Proceeding to checkout",items)
 
       alert("Checkout integration coming next (Razorpay)")
@@ -104,7 +102,6 @@ export default function CartPage() {
     <main className="min-h-screen bg-background">
       <Navbar />
 
-      {/* Breadcrumb */}
       <div className="container mx-auto px-4 py-4">
         <nav className="flex items-center gap-2 text-sm text-muted-foreground">
           <Link href="/">Home</Link>
@@ -126,96 +123,100 @@ export default function CartPage() {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
 
-            {items.map(item => (
+            {items.map(item => {
 
-              <div
-                key={`${item.id}-${item.size}-${item.color}`}
-                className="flex gap-4 p-4 bg-card border border-border rounded-sm"
-              >
+              const cartKey = `${item.id}-${item.size}-${item.color}`
 
-                {/* Image */}
-                <Link
-                  href={`/products/${item.productId}`}
-                  className="relative w-24 h-32 flex-shrink-0 bg-muted rounded-sm overflow-hidden"
+              return (
+
+                <div
+                  key={cartKey}
+                  className="flex gap-4 p-4 bg-card border border-border rounded-sm"
                 >
-                  <Image
-                    src={item.image}
-                    alt={item.name}
-                    fill
-                    className="object-cover"
-                  />
-                </Link>
+
+                  {/* Image */}
+                  <Link
+                    href={`/products/${item.productId}`}
+                    className="relative w-24 h-32 flex-shrink-0 bg-muted rounded-sm overflow-hidden"
+                  >
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </Link>
 
 
-                {/* Details */}
-                <div className="flex-1 flex flex-col">
+                  <div className="flex-1 flex flex-col">
 
-                  <div className="flex-1">
+                    <div className="flex-1">
 
-                    <Link href={`/products/${item.productId}`}>
-                      <h3 className="font-medium hover:text-primary">
-                        {item.name}
-                      </h3>
-                    </Link>
+                      <Link href={`/products/${item.productId}`}>
+                        <h3 className="font-medium hover:text-primary">
+                          {item.name}
+                        </h3>
+                      </Link>
 
-                    <div className="flex gap-3 mt-1 text-sm text-muted-foreground">
-                      {item.size && <span>Size: {item.size}</span>}
-                      {item.color && <span>Color: {item.color}</span>}
-                    </div>
+                      <div className="flex gap-3 mt-1 text-sm text-muted-foreground">
+                        {item.size && <span>Size: {item.size}</span>}
+                        {item.color && <span>Color: {item.color}</span>}
+                      </div>
 
-                    <p className="font-semibold mt-2">
-                      ₹{formatPrice(item.price)}
-                    </p>
-
-                  </div>
-
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-between mt-4">
-
-                    {/* Quantity */}
-                    <div className="flex items-center gap-2">
-
-                      <button
-                        onClick={()=>updateQuantity(item.id,Math.max(1,item.quantity-1))}
-                        className="w-8 h-8 border rounded-sm flex items-center justify-center"
-                      >
-                        <Minus className="h-3 w-3"/>
-                      </button>
-
-                      <span className="w-8 text-center text-sm font-medium">
-                        {item.quantity}
-                      </span>
-
-                      <button
-                        onClick={()=>updateQuantity(item.id,item.quantity+1)}
-                        className="w-8 h-8 border rounded-sm flex items-center justify-center"
-                      >
-                        <Plus className="h-3 w-3"/>
-                      </button>
+                      <p className="font-semibold mt-2">
+                        ₹{formatPrice(item.price)}
+                      </p>
 
                     </div>
 
 
-                    {/* Remove */}
-                    <button
-                      onClick={()=>removeItem(item.id)}
-                      className="flex items-center gap-1 text-sm hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4"/>
-                      Remove
-                    </button>
+                    {/* Actions */}
+                    <div className="flex items-center justify-between mt-4">
+
+                      {/* Quantity */}
+                      <div className="flex items-center gap-2">
+
+                        <button
+                          onClick={()=>updateQuantity(cartKey,Math.max(1,item.quantity-1))}
+                          className="w-8 h-8 border rounded-sm flex items-center justify-center"
+                        >
+                          <Minus className="h-3 w-3"/>
+                        </button>
+
+                        <span className="w-8 text-center text-sm font-medium">
+                          {item.quantity}
+                        </span>
+
+                        <button
+                          onClick={()=>updateQuantity(cartKey,item.quantity+1)}
+                          className="w-8 h-8 border rounded-sm flex items-center justify-center"
+                        >
+                          <Plus className="h-3 w-3"/>
+                        </button>
+
+                      </div>
+
+
+                      {/* Remove */}
+                      <button
+                        onClick={()=>removeItem(cartKey)}
+                        className="flex items-center gap-1 text-sm hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4"/>
+                        Remove
+                      </button>
+
+                    </div>
 
                   </div>
 
                 </div>
 
-              </div>
+              )
 
-            ))}
+            })}
 
 
-            {/* Bottom Buttons */}
             <div className="flex justify-between pt-4">
 
               <Link href="/products">
@@ -247,7 +248,6 @@ export default function CartPage() {
               </h2>
 
 
-              {/* Promo */}
               <div className="flex gap-2 mb-6">
 
                 <div className="relative flex-1">
@@ -270,7 +270,6 @@ export default function CartPage() {
               </div>
 
 
-              {/* Totals */}
               <div className="space-y-3 text-sm">
 
                 <div className="flex justify-between">
@@ -299,7 +298,6 @@ export default function CartPage() {
               </div>
 
 
-              {/* Checkout */}
               <Button
                 size="lg"
                 className="w-full mt-6 gap-2"
@@ -311,7 +309,6 @@ export default function CartPage() {
               </Button>
 
 
-              {/* Trust badges */}
               <div className="flex justify-center gap-6 mt-6 pt-6 border-t">
 
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
