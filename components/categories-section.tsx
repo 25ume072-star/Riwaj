@@ -54,43 +54,47 @@ export function CategoriesSection() {
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
 
-          {categories.map((category)=>(
+          {categories.map((category) => {
+            const count = counts[category.id] || 0
 
-            <Link
-              key={category.id}
-              href={`/products?category=${category.id}`}
-              className="group block"
-            >
+            return (
+              <Link
+                key={category.id}
+                href={`/products?category=${category.id}`}
+                className="group block"
+              >
 
-              {/* Image Frame */}
-              <div className="relative aspect-[3/4] overflow-hidden rounded-xl">
+                {/* Image Frame */}
+                <div className="relative aspect-[3/4] overflow-hidden rounded-xl">
 
-                <Image
-                  src={category.image}
-                  alt={category.name}
-                  fill
-                  sizes="(max-width:768px) 50vw, 20vw"
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                />
+                  <Image
+                    src={category.image}
+                    alt={category.name}
+                    fill
+                    sizes="(max-width:768px) 50vw, 20vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
 
-                {/* Overlay */}
-                <div className="absolute inset-0 bg-black/30 flex flex-col justify-end p-4 text-white">
+                  {/* Overlay */}
+                  <div className="absolute inset-0 bg-black/30 flex flex-col justify-end p-4 text-white">
 
-                  <h3 className="text-lg font-serif font-semibold">
-                    {category.name}
-                  </h3>
+                    <h3 className="text-lg font-serif font-semibold">
+                      {category.name}
+                    </h3>
 
-                  <p className="text-sm opacity-80">
-                    {counts[category.id] || 0} Products
-                  </p>
+                    <p className="text-sm opacity-80">
+                      {count > 0
+                        ? `${count} Products`
+                        : "New collection coming soon"}
+                    </p>
+
+                  </div>
 
                 </div>
 
-              </div>
-
-            </Link>
-
-          ))}
+              </Link>
+            )
+          })}
 
         </div>
 

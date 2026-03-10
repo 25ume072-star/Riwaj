@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import Link from "next/link"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { ProductCard } from "@/components/product-card"
@@ -29,6 +30,14 @@ const sortOptions = [
   { label: "Rating", value: "rating" },
   { label: "Newest", value: "newest" }
 ]
+
+const formatCategoryLabel = (value: string) =>
+  value
+    .split("-")
+    .map((word) =>
+      word.length ? word.charAt(0).toUpperCase() + word.slice(1) : ""
+    )
+    .join(" ")
 
 interface ProductsPageClientProps {
   products: Product[]
@@ -239,11 +248,15 @@ export function ProductsPageClient({
         <div className="container mx-auto text-center">
           <h1 className="text-4xl font-serif">
             {selectedCategory
-              ? selectedCategory.toUpperCase()
+              ? formatCategoryLabel(selectedCategory)
               : "Shop All"}
           </h1>
           <p className="text-muted-foreground mt-2">
-            {filteredProducts.length} products
+            {filteredProducts.length > 0
+              ? `${filteredProducts.length} products`
+              : products.length === 0
+                ? "Our first collection is coming soon."
+                : "No products match your filters yet."}
           </p>
         </div>
       </section>
@@ -307,13 +320,35 @@ export function ProductsPageClient({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-20">
-                <p>No products found</p>
+              <div className="text-center py-20 space-y-4">
+                <p className="text-lg font-medium">
+                  {products.length === 0
+                    ? "Our first collection is coming soon."
+                    : "No products match your current filters."}
+                </p>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  {products.length === 0
+                    ? "We’re curating timeless pieces for this category. Please check back soon."
+                    : "Try adjusting or clearing filters to see more styles that might suit your occasion."}
+                </p>
+
+                {hasActiveFilters && (
+                  <Button
+                    variant="outline"
+                    onClick={clearFilters}
+                  >
+                    Clear filters
+                  </Button>
+                )}
+
                 <Button
+                  asChild
                   variant="outline"
-                  onClick={clearFilters}
+                  className="mt-2"
                 >
-                  Reset Filters
+                  <Link href="/">
+                    Back to home
+                  </Link>
                 </Button>
               </div>
             )}
