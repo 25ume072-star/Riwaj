@@ -2,54 +2,200 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { Navbar } from "@/components/navbar"
+import { Footer } from "@/components/footer"
+import { CheckoutProgress } from "@/components/checkout-progress"
+import { useCheckout } from "@/context/checkout-context"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+
+type FormState = {
+  fullName: string
+  phone: string
+  street: string
+  city: string
+  state: string
+  postalCode: string
+  country: string
+}
 
 export default function AddressPage() {
   const router = useRouter()
+  const { address, setAddress } = useCheckout()
 
-  const [address, setAddress] = useState({
-    name: "",
-    phone: "",
-    street: "",
-    city: "",
-    state: "",
-    pincode: ""
+  const [form, setForm] = useState<FormState>({
+    fullName: address?.fullName ?? "",
+    phone: address?.phone ?? "",
+    street: address?.street ?? "",
+    city: address?.city ?? "",
+    state: address?.state ?? "",
+    postalCode: address?.postalCode ?? "",
+    country: address?.country ?? "India"
   })
 
-  const handleChange = (e:any) => {
-    setAddress({ ...address, [e.target.name]: e.target.value })
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleChange = (field: keyof FormState, value: string) => {
+    setForm(prev => ({ ...prev, [field]: value }))
+    setErrors(prev => ({ ...prev, [field]: "" }))
   }
 
-  const handleSubmit = (e:any) => {
+  const validate = (): boolean => {
+    const nextErrors: Partial<Record<keyof FormState, string>> = {}
+
+    if (!form.fullName.trim()) nextErrors.fullName = "Full name is required"
+    if (!form.phone.trim()) nextErrors.phone = "Phone number is required"
+    if (!form.street.trim()) nextErrors.street = "Street address is required"
+    if (!form.city.trim()) nextErrors.city = "City is required"
+    if (!form.state.trim()) nextErrors.state = "State is required"
+    if (!form.postalCode.trim()) nextErrors.postalCode = "Postal code is required"
+    if (!form.country.trim()) nextErrors.country = "Country is required"
+
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!validate()) return
 
-    localStorage.setItem("shipping_address", JSON.stringify(address))
-
+    setSubmitting(true)
+    setAddress({
+      fullName: form.fullName.trim(),
+      phone: form.phone.trim(),
+      street: form.street.trim(),
+      city: form.city.trim(),
+      state: form.state.trim(),
+      postalCode: form.postalCode.trim(),
+      country: form.country.trim()
+    })
     router.push("/checkout/payment")
   }
 
   return (
-    <div className="max-w-xl mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-6">Shipping Address</h1>
+    <main className="min-h-screen bg-background">
+      <Navbar />
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="container mx-auto px-4 py-8 max-w-2xl">
+        <CheckoutProgress current="address" />
 
-        <input name="name" placeholder="Full Name" onChange={handleChange} required />
+        <h1 className="text-2xl md:text-3xl font-serif font-semibold mb-6">
+          Shipping Address
+        </h1>
 
-        <input name="phone" placeholder="Phone Number" onChange={handleChange} required />
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                value={form.fullName}
+                onChange={(e) => handleChange("fullName", e.target.value)}
+                placeholder="Enter your full name"
+              />
+              {errors.fullName && (
+                <p className="mt-1 text-xs text-destructive">{errors.fullName}</p>
+              )}
+            </div>
 
-        <input name="street" placeholder="Street Address" onChange={handleChange} required />
+            <div>
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                value={form.phone}
+                onChange={(e) => handleChange("phone", e.target.value)}
+                placeholder="+91 9XXXXXXXXX"
+              />
+              {errors.phone && (
+                <p className="mt-1 text-xs text-destructive">{errors.phone}</p>
+              )}
+            </div>
 
-        <input name="city" placeholder="City" onChange={handleChange} required />
+            <div>
+              <Label htmlFor="country">Country</Label>
+              <Input
+                id="country"
+                value={form.country}
+                onChange={(e) => handleChange("country", e.target.value)}
+                placeholder="Country"
+              />
+              {errors.country && (
+                <p className="mt-1 text-xs text-destructive">{errors.country}</p>
+              )}
+            </div>
+          </div>
 
-        <input name="state" placeholder="State" onChange={handleChange} required />
+          <div>
+            <Label htmlFor="street">Street Address</Label>
+            <Input
+              id="street"
+              value={form.street}
+              onChange={(e) => handleChange("street", e.target.value)}
+              placeholder="House number, street, area"
+            />
+            {errors.street && (
+              <p className="mt-1 text-xs text-destructive">{errors.street}</p>
+            )}
+          </div>
 
-        <input name="pincode" placeholder="Pincode" onChange={handleChange} required />
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <Label htmlFor="city">City</Label>
+              <Input
+                id="city"
+                value={form.city}
+                onChange={(e) => handleChange("city", e.target.value)}
+              />
+              {errors.city && (
+                <p className="mt-1 text-xs text-destructive">{errors.city}</p>
+              )}
+            </div>
 
-        <button type="submit" className="bg-black text-white px-6 py-2">
-          Continue to Payment
-        </button>
+            <div>
+              <Label htmlFor="state">State</Label>
+              <Input
+                id="state"
+                value={form.state}
+                onChange={(e) => handleChange("state", e.target.value)}
+              />
+              {errors.state && (
+                <p className="mt-1 text-xs text-destructive">{errors.state}</p>
+              )}
+            </div>
 
-      </form>
-    </div>
+            <div>
+              <Label htmlFor="postalCode">Postal Code</Label>
+              <Input
+                id="postalCode"
+                value={form.postalCode}
+                onChange={(e) => handleChange("postalCode", e.target.value)}
+              />
+              {errors.postalCode && (
+                <p className="mt-1 text-xs text-destructive">{errors.postalCode}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-between pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push("/cart")}
+            >
+              Back to Cart
+            </Button>
+
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Continuing..." : "Continue to Payment"}
+            </Button>
+          </div>
+        </form>
+      </div>
+
+      <Footer />
+    </main>
   )
 }
+

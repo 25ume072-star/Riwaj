@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Navbar } from "@/components/navbar"
+import { CheckoutProgress } from "@/components/checkout-progress"
 import { Footer } from "@/components/footer"
 import { useCart } from "@/context/cart-context"
 import { Button } from "@/components/ui/button"
@@ -20,8 +21,6 @@ import {
   Tag
 } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
-import { createClient } from "@/lib/supabase/client"
-import type { Order, OrderItem } from "@/lib/database.types"
 
 export default function CartPage() {
 
@@ -31,7 +30,6 @@ export default function CartPage() {
   const [checkingOut, setCheckingOut] = useState(false)
 
   const router = useRouter()
-  const supabase = createClient()
 
   const shipping = totalPrice >= 2999 ? 0 : 199
   const finalTotal = totalPrice + shipping
@@ -40,8 +38,7 @@ export default function CartPage() {
     return price.toLocaleString("en-IN")
   }
 
-  const handleCheckout = async () => {
-
+  const handleCheckout = () => {
     if(items.length === 0) return
 
     if(!user){
@@ -49,65 +46,7 @@ export default function CartPage() {
       return
     }
 
-    setCheckingOut(true)
-
-    try{
-
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          user_id: user.id,
-          subtotal: totalPrice,
-          shipping,
-          discount: 0,
-          total: finalTotal,
-          promo_code: promoCode || null,
-          payment_method: "cod",
-          payment_status: "pending",
-          status: "pending"
-        })
-        .select()
-        .single()
-
-      if(orderError || !order){
-        console.error(orderError)
-        alert("Could not create order. Please try again.")
-        setCheckingOut(false)
-        return
-      }
-
-      const orderItems: Omit<OrderItem,"id" | "created_at">[] = items.map(item=>({
-        order_id: order.id,
-        product_id: item.productId,
-        quantity: item.quantity,
-        price: item.price,
-        size: item.size ?? null,
-        color: item.color ?? null
-      }))
-
-      const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(orderItems as any)
-
-      if(itemsError){
-        console.error(itemsError)
-        alert("Order created but items could not be saved. Please contact support.")
-        setCheckingOut(false)
-        return
-      }
-
-      await clearCart()
-
-      alert("Order placed successfully!")
-      router.push("/")
-
-    }catch(err){
-      console.error(err)
-      alert("Something went wrong while placing your order.")
-    }
-
-    setCheckingOut(false)
-
+    router.push("/checkout/address")
   }
 
 
@@ -170,9 +109,12 @@ export default function CartPage() {
 
       <div className="container mx-auto px-4 py-8">
 
-        <h1 className="text-2xl md:text-3xl font-serif font-semibold mb-8">
+        <div className="flex flex-col gap-4 mb-8">
+          <CheckoutProgress current="cart" />
+          <h1 className="text-2xl md:text-3xl font-serif font-semibold">
           Shopping Cart ({totalItems})
-        </h1>
+          </h1>
+        </div>
 
 
         <div className="grid lg:grid-cols-3 gap-8">

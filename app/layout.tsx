@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Cormorant_Garamond, Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/react"
 import { CartProvider } from "@/context/cart-context"
+import { CheckoutProvider } from "@/context/checkout-context"
 import { Toaster } from "sonner"
 import Script from "next/script";
 import "./globals.css"
@@ -132,14 +133,12 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
 
-        <CartProvider>
-
-          {children}
-
-          {/* Toast notifications */}
-          <Toaster position="top-right" richColors />
-
-        </CartProvider>
+        <CheckoutProvider>
+          <CartProvider>
+            {children}
+            <Toaster position="top-right" richColors />
+          </CartProvider>
+        </CheckoutProvider>
 
         {/* Vercel analytics */}
         <Analytics />
