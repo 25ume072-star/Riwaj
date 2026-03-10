@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Product } from "@/lib/database.types";
 import type { CSSProperties } from "react";
+import Link from "next/link";
 
 export default function AdminPage() {
   const supabase = createClient();
@@ -165,6 +166,11 @@ export default function AdminPage() {
     <div style={containerStyle}>
       <h1 style={titleStyle}>Riwaj Admin Panel</h1>
 
+      {/* Admin Orders Button */}
+      <Link href="/admin/orders">
+        <button style={ordersButton}>View Orders</button>
+      </Link>
+
       <div style={formBox}>
         <input
           placeholder="Product Name"
@@ -229,7 +235,6 @@ export default function AdminPage() {
             >
               Edit
             </button>
-            
 
             <button onClick={() => deleteProduct(p)} style={dangerButton}>
               Delete
@@ -283,6 +288,16 @@ const dangerButton: CSSProperties = {
   padding: "8px 14px",
   borderRadius: "6px",
   cursor: "pointer",
+};
+
+const ordersButton: CSSProperties = {
+  background: "#059669",
+  color: "#fff",
+  border: "none",
+  padding: "10px 16px",
+  borderRadius: "6px",
+  cursor: "pointer",
+  marginBottom: "20px",
 };
 
 const grid: CSSProperties = {
