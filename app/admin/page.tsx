@@ -7,17 +7,33 @@ import type { Product } from "@/lib/database.types";
 export default function AdminPage() {
   const supabase = createClient();
 
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const ADMIN_EMAIL = "storeriwaj@gmail.com";
+
+  // Check admin
+  const checkAdmin = async () => {
+    const { data } = await supabase.auth.getUser();
+
+    const email = data.user?.email ?? null;
+    setUserEmail(email);
+  };
+
   // Fetch products
   const fetchProducts = async () => {
-    const { data, error } = await supabase.from("products").select("*");
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Fetch error:", error);
@@ -27,16 +43,23 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
+    checkAdmin();
     fetchProducts();
   }, []);
 
   // Handle image preview
   const handleFileChange = (file: File | null) => {
     setFile(file);
+
     if (file) {
-      setPreview(URL.createObjectURL(file));
+      const url = URL.createObjectURL(file);
+      setPreview(url);
     }
   };
+
+  // Create slug
+  const createSlug = (name: string) =>
+    name.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
 
   // Add product
   const addProduct = async () => {
@@ -46,8 +69,9 @@ export default function AdminPage() {
     }
 
     const numericPrice = parseFloat(price);
+
     if (Number.isNaN(numericPrice) || numericPrice <= 0) {
-      alert("Please enter a valid numeric price");
+      alert("Invalid price");
       return;
     }
 
@@ -67,12 +91,15 @@ export default function AdminPage() {
 
     const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/${fileName}`;
 
+    const slug = createSlug(name);
+
     const { error } = await supabase.from("products").insert([
       {
         name,
         price: numericPrice,
         category,
         image_url: imageUrl,
+        slug,
       },
     ]);
 
@@ -80,11 +107,13 @@ export default function AdminPage() {
       alert(error.message);
     } else {
       alert("Product added successfully!");
+
       setName("");
       setPrice("");
       setCategory("");
       setFile(null);
       setPreview(null);
+
       fetchProducts();
     }
 
@@ -92,57 +121,62 @@ export default function AdminPage() {
   };
 
   // Delete product
-  const deleteProduct = async (id: string) => {
-    const { error } = await supabase.from("products").delete().eq("id", id);
+  const deleteProduct = async (product: Product) => {
+    if (!confirm("Delete this product?")) return;
+
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", product.id);
 
     if (error) {
-      console.log(error);
+      alert(error.message);
     } else {
-      setProducts((prev) => prev.filter((p) => p.id !== id));
+      setProducts((prev) => prev.filter((p) => p.id !== product.id));
     }
   };
 
   // Edit product price
-  const editProduct = async (id: string) => {
-    const newPriceInput = prompt("Enter new price");
+  const editProduct = async (product: Product) => {
+    const newPriceInput = prompt("Enter new price", String(product.price));
 
     if (!newPriceInput) return;
 
     const newPrice = parseFloat(newPriceInput);
+
     if (Number.isNaN(newPrice) || newPrice <= 0) {
-      alert("Please enter a valid numeric price");
+      alert("Invalid price");
       return;
     }
 
     const { error } = await supabase
       .from("products")
       .update({ price: newPrice })
-      .eq("id", id);
+      .eq("id", product.id);
 
     if (error) {
-      console.log(error);
+      alert(error.message);
     } else {
       setProducts((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, price: newPrice } : p))
+        prev.map((p) =>
+          p.id === product.id ? { ...p, price: newPrice } : p
+        )
       );
     }
   };
 
+  if (userEmail !== ADMIN_EMAIL) {
+    return <div style={{ padding: "40px" }}>Not Authorized</div>;
+  }
+
   return (
-    <div style={{ padding: "40px", maxWidth: "1000px", margin: "auto" }}>
-      <h1 style={{ fontSize: "28px", marginBottom: "20px" }}>
-        Admin Product Panel
+    <div style={{ padding: "40px", maxWidth: "1100px", margin: "auto" }}>
+      <h1 style={{ fontSize: "30px", marginBottom: "20px" }}>
+        Riwaj Admin Panel
       </h1>
 
-      {/* Add Product Form */}
-      <div
-        style={{
-          border: "1px solid #ddd",
-          padding: "20px",
-          borderRadius: "10px",
-          marginBottom: "40px",
-        }}
-      >
+      {/* Add Product */}
+      <div style={formBox}>
         <input
           placeholder="Product Name"
           value={name}
@@ -157,7 +191,6 @@ export default function AdminPage() {
           style={inputStyle}
         />
 
-        {/* Category Dropdown */}
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
@@ -179,57 +212,38 @@ export default function AdminPage() {
 
         {preview && (
           <img
-            src={preview ?? ""}
-            style={{
-              width: "120px",
-              borderRadius: "8px",
-              marginBottom: "10px",
-            }}
+            src={preview}
+            style={{ width: "120px", borderRadius: "8px", marginBottom: "10px" }}
           />
         )}
-
-        <br />
 
         <button onClick={addProduct} style={primaryButton}>
           {loading ? "Uploading..." : "Add Product"}
         </button>
       </div>
 
-      {/* Product Grid */}
-      <h2>Products</h2>
+      <h2 style={{ marginTop: "40px" }}>Products</h2>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))",
-          gap: "20px",
-          marginTop: "20px",
-        }}
-      >
+      <div style={grid}>
         {products.map((p) => (
           <div key={p.id} style={cardStyle}>
-            <img
-              src={p.image_url ?? ""}
-              style={{
-                width: "100%",
-                height: "150px",
-                objectFit: "cover",
-                borderRadius: "8px",
-              }}
-            />
+            <img src={p.image_url ?? ""} style={imageStyle} />
 
             <h3>{p.name}</h3>
             <p style={{ fontWeight: "bold" }}>₹{p.price}</p>
             <p style={{ fontSize: "14px", color: "#555" }}>{p.category}</p>
 
             <button
-              onClick={() => editProduct(p.id)}
+              onClick={() => editProduct(p)}
               style={{ ...primaryButton, marginRight: "8px" }}
             >
               Edit
             </button>
 
-            <button onClick={() => deleteProduct(p.id)} style={dangerButton}>
+            <button
+              onClick={() => deleteProduct(p)}
+              style={dangerButton}
+            >
               Delete
             </button>
           </div>
@@ -238,6 +252,12 @@ export default function AdminPage() {
     </div>
   );
 }
+
+const formBox = {
+  border: "1px solid #ddd",
+  padding: "20px",
+  borderRadius: "10px",
+};
 
 const inputStyle = {
   display: "block",
@@ -266,10 +286,24 @@ const dangerButton = {
   cursor: "pointer",
 };
 
+const grid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))",
+  gap: "20px",
+  marginTop: "20px",
+};
+
 const cardStyle = {
   border: "1px solid #ddd",
   borderRadius: "12px",
   padding: "15px",
   background: "#fff",
   boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+};
+
+const imageStyle = {
+  width: "100%",
+  height: "150px",
+  objectFit: "cover",
+  borderRadius: "8px",
 };
