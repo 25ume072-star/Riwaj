@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Product } from "@/lib/database.types";
 import type { CSSProperties } from "react";
+import { Link } from "lucide-react";
 
 export default function AdminPage() {
   const supabase = createClient();
@@ -229,6 +230,14 @@ export default function AdminPage() {
             >
               Edit
             </button>
+            import Link from "next/link"
+
+           <Link
+               href="/admin/orders"
+               className="bg-black text-white px-4 py-2 rounded-md"
+              >
+            View Orders
+          </Link>
 
             <button onClick={() => deleteProduct(p)} style={dangerButton}>
               Delete
