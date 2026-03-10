@@ -93,9 +93,9 @@ export default function ProductDetailPage({
   }
 
   const images =
-  product.images?.length
-    ? product.images
-    : [product.image_url || "/placeholder.jpg"]
+    product.images?.length
+      ? product.images
+      : [product.image_url || "/placeholder.jpg"]
     
   const discount = product.original_price 
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)

@@ -25,10 +25,18 @@ export function PromoBanner() {
                 Wedding Season Sale
               </h2>
 
-              <p className="text-primary-foreground/80 text-base md:text-lg mb-8 max-w-md leading-relaxed">
+              <p className="text-primary-foreground/80 text-base md:text-lg mb-4 max-w-md leading-relaxed">
                 Celebrate your special moments with timeless elegance. Enjoy
                 up to <span className="font-semibold text-secondary">40% OFF</span> on our
                 handcrafted bridal collection.
+              </p>
+
+              <p className="text-sm md:text-base text-primary-foreground/80 mb-8">
+                Use code <span className="font-semibold">RIWAJ10</span> for an
+                extra 10% off on orders above ₹9,999.{" "}
+                <span className="font-medium underline underline-offset-4">
+                  Sale ends soon.
+                </span>
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -74,7 +82,7 @@ export function PromoBanner() {
 
               <Image
                 src="https://images.unsplash.com/photo-1594463750939-ebb28c3f7f75?w=800&h=600&fit=crop"
-                alt="Wedding Collection"
+                alt="Rajasthani bridal couple in traditional attire"
                 fill
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
                 sizes="(max-width:1024px) 100vw, 50vw"
