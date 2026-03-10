@@ -9,9 +9,16 @@ import { useCheckout } from "@/context/checkout-context"
 import { useCart } from "@/context/cart-context"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
-import type { Address, Order, OrderItem } from "@/lib/database.types"
+import type { OrderItem } from "@/lib/database.types"
+
+declare global {
+  interface Window {
+    Razorpay: any
+  }
+}
 
 export default function PaymentPage() {
+
   const router = useRouter()
   const { address, setAddress } = useCheckout()
   const { items, totalPrice, clearCart, user } = useCart()
@@ -20,9 +27,16 @@ export default function PaymentPage() {
   const [placing, setPlacing] = useState(false)
 
   useEffect(() => {
+
     if (!address) {
       router.replace("/checkout/address")
     }
+
+    const script = document.createElement("script")
+    script.src = "https://checkout.razorpay.com/v1/checkout.js"
+    script.async = true
+    document.body.appendChild(script)
+
   }, [address, router])
 
   const shipping = totalPrice >= 2999 ? 0 : 199
@@ -31,7 +45,80 @@ export default function PaymentPage() {
   const formatPrice = (price: number) =>
     price.toLocaleString("en-IN")
 
+  const saveOrder = async () => {
+
+    const { data: addressRow, error: addressError } = await supabase
+      .from("addresses")
+      .insert({
+        user_id: user!.id,
+        name: address!.fullName,
+        address_line1: address!.street,
+        address_line2: null,
+        city: address!.city,
+        state: address!.state,
+        pincode: address!.postalCode,
+        phone: address!.phone,
+        is_default: false
+      })
+      .select()
+      .single()
+
+    if (addressError || !addressRow) {
+      console.error(addressError)
+      alert("Could not save address.")
+      return
+    }
+
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .insert({
+        user_id: user!.id,
+        address_id: addressRow.id,
+        subtotal: totalPrice,
+        shipping,
+        discount: 0,
+        total: finalTotal,
+        promo_code: null,
+        payment_method: "razorpay",
+        payment_status: "paid",
+        status: "processing"
+      })
+      .select()
+      .single()
+
+    if (orderError || !order) {
+      console.error(orderError)
+      alert("Could not create order.")
+      return
+    }
+
+    const orderItems: Omit<OrderItem, "id" | "created_at">[] = items.map(item => ({
+      order_id: order.id,
+      product_id: item.productId,
+      quantity: item.quantity,
+      price: item.price,
+      size: item.size ?? null,
+      color: item.color ?? null
+    }))
+
+    const { error: itemsError } = await supabase
+      .from("order_items")
+      .insert(orderItems as any)
+
+    if (itemsError) {
+      console.error(itemsError)
+      alert("Items could not be saved.")
+      return
+    }
+
+    await clearCart()
+    setAddress(null)
+
+    router.push(`/checkout/confirmation?orderId=${order.id}`)
+  }
+
   const handlePlaceOrder = async () => {
+
     if (!address) {
       router.replace("/checkout/address")
       return
@@ -50,93 +137,66 @@ export default function PaymentPage() {
     setPlacing(true)
 
     try {
-      const { data: addressRow, error: addressError } = await supabase
-        .from("addresses")
-        .insert({
-          user_id: user.id,
-          name: address.fullName,
-          address_line1: address.street,
-          address_line2: null,
-          city: address.city,
-          state: address.state,
-          pincode: address.postalCode,
-          phone: address.phone,
-          is_default: false
+
+      const res = await fetch("/api/razorpay/order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          amount: finalTotal
         })
-        .select()
-        .single()
+      })
 
-      if (addressError || !addressRow) {
-        console.error(addressError)
-        alert("Could not save address. Please try again.")
-        setPlacing(false)
-        return
-      }
+      const order = await res.json()
 
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          user_id: user.id,
-          address_id: addressRow.id,
-          subtotal: totalPrice,
-          shipping,
-          discount: 0,
-          total: finalTotal,
-          promo_code: null,
-          payment_method: "cod",
-          payment_status: "pending",
-          status: "pending"
-        })
-        .select()
-        .single()
-
-      if (orderError || !order) {
-        console.error(orderError)
-        alert("Could not create order. Please try again.")
-        setPlacing(false)
-        return
-      }
-
-      const orderItems: Omit<OrderItem, "id" | "created_at">[] = items.map(item => ({
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: "INR",
+        name: "Riwaj Store",
+        description: "Order Payment",
         order_id: order.id,
-        product_id: item.productId,
-        quantity: item.quantity,
-        price: item.price,
-        size: item.size ?? null,
-        color: item.color ?? null
-      }))
 
-      const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(orderItems as any)
+        handler: async function () {
 
-      if (itemsError) {
-        console.error(itemsError)
-        alert("Order created but items could not be saved. Please contact support.")
-        setPlacing(false)
-        return
+          await saveOrder()
+
+        },
+
+        prefill: {
+          name: address.fullName,
+          contact: address.phone
+        },
+
+        theme: {
+          color: "#000000"
+        }
       }
 
-      await clearCart()
-      setAddress(null)
+      const rzp = new window.Razorpay(options)
+      rzp.open()
 
-      router.push(`/checkout/confirmation?orderId=${order.id}`)
     } catch (err) {
+
       console.error(err)
-      alert("Something went wrong while placing your order.")
+      alert("Payment failed to start.")
       setPlacing(false)
+
     }
+
   }
 
-  if (!address) {
-    return null
-  }
+  if (!address) return null
 
   return (
+
     <main className="min-h-screen bg-background">
+
       <Navbar />
 
       <div className="container mx-auto px-4 py-8 max-w-3xl">
+
         <CheckoutProgress current="payment" />
 
         <h1 className="text-2xl md:text-3xl font-serif font-semibold mb-6">
@@ -144,8 +204,11 @@ export default function PaymentPage() {
         </h1>
 
         <div className="grid gap-6 md:grid-cols-2">
+
           <div className="space-y-4">
+
             <h2 className="text-lg font-semibold">Shipping Address</h2>
+
             <div className="rounded-sm border bg-card p-4 text-sm space-y-1">
               <p className="font-medium">{address.fullName}</p>
               <p className="text-muted-foreground">{address.phone}</p>
@@ -157,28 +220,34 @@ export default function PaymentPage() {
             <Button
               variant="outline"
               size="sm"
-              className="mt-2"
               onClick={() => router.push("/checkout/address")}
             >
               Edit Address
             </Button>
+
           </div>
 
           <div className="space-y-4">
+
             <h2 className="text-lg font-semibold">Order Summary</h2>
+
             <div className="rounded-sm border bg-card p-4 text-sm space-y-3">
+
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>₹{formatPrice(totalPrice)}</span>
               </div>
+
               <div className="flex justify-between">
                 <span>Shipping</span>
                 <span>{shipping === 0 ? "FREE" : `₹${formatPrice(shipping)}`}</span>
               </div>
+
               <div className="border-t pt-3 flex justify-between font-semibold">
                 <span>Total</span>
                 <span>₹{formatPrice(finalTotal)}</span>
               </div>
+
             </div>
 
             <Button
@@ -187,14 +256,19 @@ export default function PaymentPage() {
               disabled={placing}
               onClick={handlePlaceOrder}
             >
-              {placing ? "Placing Order..." : "Place Order (Cash on Delivery)"}
+              {placing ? "Processing Payment..." : "Pay with Razorpay"}
             </Button>
+
           </div>
+
         </div>
+
       </div>
 
       <Footer />
-    </main>
-  )
-}
 
+    </main>
+
+  )
+
+}
