@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Product } from "@/lib/database.types";
+import type { CSSProperties } from "react";
 
 export default function AdminPage() {
   const supabase = createClient();
@@ -20,15 +21,11 @@ export default function AdminPage() {
 
   const ADMIN_EMAIL = "storeriwaj@gmail.com";
 
-  // Check admin
   const checkAdmin = async () => {
     const { data } = await supabase.auth.getUser();
-
-    const email = data.user?.email ?? null;
-    setUserEmail(email);
+    setUserEmail(data.user?.email ?? null);
   };
 
-  // Fetch products
   const fetchProducts = async () => {
     const { data, error } = await supabase
       .from("products")
@@ -47,7 +44,6 @@ export default function AdminPage() {
     fetchProducts();
   }, []);
 
-  // Handle image preview
   const handleFileChange = (file: File | null) => {
     setFile(file);
 
@@ -57,11 +53,9 @@ export default function AdminPage() {
     }
   };
 
-  // Create slug
   const createSlug = (name: string) =>
     name.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
 
-  // Add product
   const addProduct = async () => {
     if (!name || !price || !category || !file) {
       alert("Please fill all fields");
@@ -120,7 +114,6 @@ export default function AdminPage() {
     setLoading(false);
   };
 
-  // Delete product
   const deleteProduct = async (product: Product) => {
     if (!confirm("Delete this product?")) return;
 
@@ -136,7 +129,6 @@ export default function AdminPage() {
     }
   };
 
-  // Edit product price
   const editProduct = async (product: Product) => {
     const newPriceInput = prompt("Enter new price", String(product.price));
 
@@ -170,12 +162,9 @@ export default function AdminPage() {
   }
 
   return (
-    <div style={{ padding: "40px", maxWidth: "1100px", margin: "auto" }}>
-      <h1 style={{ fontSize: "30px", marginBottom: "20px" }}>
-        Riwaj Admin Panel
-      </h1>
+    <div style={containerStyle}>
+      <h1 style={titleStyle}>Riwaj Admin Panel</h1>
 
-      {/* Add Product */}
       <div style={formBox}>
         <input
           placeholder="Product Name"
@@ -213,6 +202,7 @@ export default function AdminPage() {
         {preview && (
           <img
             src={preview}
+            alt="preview"
             style={{ width: "120px", borderRadius: "8px", marginBottom: "10px" }}
           />
         )}
@@ -227,7 +217,7 @@ export default function AdminPage() {
       <div style={grid}>
         {products.map((p) => (
           <div key={p.id} style={cardStyle}>
-            <img src={p.image_url ?? ""} style={imageStyle} />
+            <img src={p.image_url ?? ""} alt={p.name} style={imageStyle} />
 
             <h3>{p.name}</h3>
             <p style={{ fontWeight: "bold" }}>₹{p.price}</p>
@@ -240,10 +230,7 @@ export default function AdminPage() {
               Edit
             </button>
 
-            <button
-              onClick={() => deleteProduct(p)}
-              style={dangerButton}
-            >
+            <button onClick={() => deleteProduct(p)} style={dangerButton}>
               Delete
             </button>
           </div>
@@ -253,13 +240,24 @@ export default function AdminPage() {
   );
 }
 
-const formBox = {
+const containerStyle: CSSProperties = {
+  padding: "40px",
+  maxWidth: "1100px",
+  margin: "auto",
+};
+
+const titleStyle: CSSProperties = {
+  fontSize: "30px",
+  marginBottom: "20px",
+};
+
+const formBox: CSSProperties = {
   border: "1px solid #ddd",
   padding: "20px",
   borderRadius: "10px",
 };
 
-const inputStyle = {
+const inputStyle: CSSProperties = {
   display: "block",
   width: "100%",
   padding: "10px",
@@ -268,7 +266,7 @@ const inputStyle = {
   border: "1px solid #ccc",
 };
 
-const primaryButton = {
+const primaryButton: CSSProperties = {
   background: "#2563eb",
   color: "#fff",
   border: "none",
@@ -277,7 +275,7 @@ const primaryButton = {
   cursor: "pointer",
 };
 
-const dangerButton = {
+const dangerButton: CSSProperties = {
   background: "#b91c1c",
   color: "#fff",
   border: "none",
@@ -286,14 +284,14 @@ const dangerButton = {
   cursor: "pointer",
 };
 
-const grid = {
+const grid: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))",
   gap: "20px",
   marginTop: "20px",
 };
 
-const cardStyle = {
+const cardStyle: CSSProperties = {
   border: "1px solid #ddd",
   borderRadius: "12px",
   padding: "15px",
@@ -301,7 +299,7 @@ const cardStyle = {
   boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
 };
 
-const imageStyle = {
+const imageStyle: CSSProperties = {
   width: "100%",
   height: "150px",
   objectFit: "cover",
