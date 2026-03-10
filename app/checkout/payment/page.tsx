@@ -1,88 +1,193 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
+import { CheckoutProgress } from "@/components/checkout-progress"
+import { useCheckout } from "@/context/checkout-context"
+import { useCart } from "@/context/cart-context"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
+import type { OrderItem } from "@/lib/database.types"
 
-export default function ConfirmationPage() {
+declare global {
+  interface Window {
+    Razorpay: any
+  }
+}
 
-  const searchParams = useSearchParams()
+export default function PaymentPage() {
+
   const router = useRouter()
+  const { address, setAddress } = useCheckout()
+  const { items, totalPrice, clearCart, user } = useCart()
   const supabase = createClient()
 
-  const orderId = searchParams.get("orderId")
-
-  const [order, setOrder] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const formatPrice = (price: number) =>
-    price?.toLocaleString("en-IN")
+  const [placing, setPlacing] = useState(false)
 
   useEffect(() => {
 
-    const fetchOrder = async () => {
+    if (!address) {
+      router.replace("/checkout/address")
+    }
 
-      if (!orderId) {
-        router.push("/")
-        return
+    const script = document.createElement("script")
+    script.src = "https://checkout.razorpay.com/v1/checkout.js"
+    script.async = true
+    document.body.appendChild(script)
+
+  }, [address, router])
+
+  const shipping = totalPrice >= 2999 ? 0 : 199
+  const finalTotal = totalPrice + shipping
+
+  const formatPrice = (price: number) =>
+    price.toLocaleString("en-IN")
+
+  const saveOrder = async () => {
+
+    const { data: addressRow, error: addressError } = await supabase
+      .from("addresses")
+      .insert({
+        user_id: user!.id,
+        name: address!.fullName,
+        address_line1: address!.street,
+        address_line2: null,
+        city: address!.city,
+        state: address!.state,
+        pincode: address!.postalCode,
+        phone: address!.phone,
+        is_default: false
+      })
+      .select()
+      .single()
+
+    if (addressError || !addressRow) {
+      console.error(addressError)
+      alert("Could not save address.")
+      return
+    }
+
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .insert({
+        user_id: user!.id,
+        address_id: addressRow.id,
+        subtotal: totalPrice,
+        shipping,
+        discount: 0,
+        total: finalTotal,
+        promo_code: null,
+        payment_method: "razorpay",
+        payment_status: "paid",
+        status: "processing"
+      })
+      .select()
+      .single()
+
+    if (orderError || !order) {
+      console.error(orderError)
+      alert("Could not create order.")
+      return
+    }
+
+    const orderItems: Omit<OrderItem, "id" | "created_at">[] = items.map(item => ({
+      order_id: order.id,
+      product_id: item.productId,
+      quantity: item.quantity,
+      price: item.price,
+      size: item.size ?? null,
+      color: item.color ?? null
+    }))
+
+    const { error: itemsError } = await supabase
+      .from("order_items")
+      .insert(orderItems as any)
+
+    if (itemsError) {
+      console.error(itemsError)
+      alert("Items could not be saved.")
+      return
+    }
+
+    await clearCart()
+    setAddress(null)
+
+    router.push(`/checkout/confirmation?orderId=${order.id}`)
+  }
+
+  const handlePlaceOrder = async () => {
+
+    if (!address) {
+      router.replace("/checkout/address")
+      return
+    }
+
+    if (!user) {
+      router.push("/login?redirect=/checkout/payment")
+      return
+    }
+
+    if (items.length === 0) {
+      router.push("/cart")
+      return
+    }
+
+    setPlacing(true)
+
+    try {
+
+      const res = await fetch("/api/razorpay/order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          amount: finalTotal
+        })
+      })
+
+      const order = await res.json()
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: "INR",
+        name: "Riwaj Store",
+        description: "Order Payment",
+        order_id: order.id,
+
+        handler: async function () {
+
+          await saveOrder()
+
+        },
+
+        prefill: {
+          name: address.fullName,
+          contact: address.phone
+        },
+
+        theme: {
+          color: "#000000"
+        }
       }
 
-      const { data, error } = await supabase
-        .from("orders")
-        .select(`
-          *,
-          order_items (
-            *,
-            products (
-              name,
-              price,
-              images
-            )
-          )
-        `)
-        .eq("id", orderId)
-        .single()
+      const rzp = new window.Razorpay(options)
+      rzp.open()
 
-      if (error) {
-        console.error(error)
-        setError("Unable to load order details.")
-        setLoading(false)
-        return
-      }
+    } catch (err) {
 
-      setOrder(data)
-      setLoading(false)
+      console.error(err)
+      alert("Payment failed to start.")
+      setPlacing(false)
 
     }
 
-    fetchOrder()
-
-  }, [orderId, router, supabase])
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground text-lg">Loading your order...</p>
-      </main>
-    )
   }
 
-  if (error || !order) {
-    return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <p className="text-lg font-semibold">Order not found</p>
-          <Button onClick={() => router.push("/")}>
-            Go to Home
-          </Button>
-        </div>
-      </main>
-    )
-  }
+  if (!address) return null
 
   return (
 
@@ -90,141 +195,71 @@ export default function ConfirmationPage() {
 
       <Navbar />
 
-      <div className="container mx-auto px-4 py-12 max-w-4xl">
+      <div className="container mx-auto px-4 py-8 max-w-3xl">
 
-        <div className="text-center mb-10">
+        <CheckoutProgress current="payment" />
 
-          <h1 className="text-3xl md:text-4xl font-serif font-semibold mb-3">
-            🎉 Order Confirmed
-          </h1>
+        <h1 className="text-2xl md:text-3xl font-serif font-semibold mb-6">
+          Payment
+        </h1>
 
-          <p className="text-muted-foreground">
-            Thank you for your purchase. Your order has been successfully placed.
-          </p>
-
-        </div>
-
-        {/* Order Info */}
-
-        <div className="border rounded-md p-6 mb-8 space-y-2 text-sm">
-
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Order ID</span>
-            <span className="font-medium">{order.id}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Order Status</span>
-            <span className="font-medium capitalize">{order.status}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Payment Status</span>
-            <span className="font-medium capitalize">{order.payment_status}</span>
-          </div>
-
-        </div>
-
-        {/* Order Items */}
-
-        <div className="border rounded-md p-6 mb-8">
-
-          <h2 className="text-lg font-semibold mb-4">
-            Items in your order
-          </h2>
+        <div className="grid gap-6 md:grid-cols-2">
 
           <div className="space-y-4">
 
-            {order.order_items?.map((item: any) => {
+            <h2 className="text-lg font-semibold">Shipping Address</h2>
 
-              const product = item.products
+            <div className="rounded-sm border bg-card p-4 text-sm space-y-1">
+              <p className="font-medium">{address.fullName}</p>
+              <p className="text-muted-foreground">{address.phone}</p>
+              <p>{address.street}</p>
+              <p>{address.city}, {address.state}</p>
+              <p>{address.postalCode}, {address.country}</p>
+            </div>
 
-              return (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-4 border-b pb-4"
-                >
-
-                  {product?.images?.[0] && (
-                    <img
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                  )}
-
-                  <div className="flex-1">
-
-                    <p className="font-medium">
-                      {product?.name}
-                    </p>
-
-                    <p className="text-sm text-muted-foreground">
-                      Qty: {item.quantity}
-                    </p>
-
-                    {item.size && (
-                      <p className="text-sm text-muted-foreground">
-                        Size: {item.size}
-                      </p>
-                    )}
-
-                  </div>
-
-                  <div className="font-medium">
-                    ₹{formatPrice(item.price * item.quantity)}
-                  </div>
-
-                </div>
-              )
-
-            })}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/checkout/address")}
+            >
+              Edit Address
+            </Button>
 
           </div>
 
-        </div>
+          <div className="space-y-4">
 
-        {/* Order Total */}
+            <h2 className="text-lg font-semibold">Order Summary</h2>
 
-        <div className="border rounded-md p-6 mb-10 space-y-3 text-sm">
+            <div className="rounded-sm border bg-card p-4 text-sm space-y-3">
 
-          <div className="flex justify-between">
-            <span>Subtotal</span>
-            <span>₹{formatPrice(order.subtotal)}</span>
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+                <span>₹{formatPrice(totalPrice)}</span>
+              </div>
+
+              <div className="flex justify-between">
+                <span>Shipping</span>
+                <span>{shipping === 0 ? "FREE" : `₹${formatPrice(shipping)}`}</span>
+              </div>
+
+              <div className="border-t pt-3 flex justify-between font-semibold">
+                <span>Total</span>
+                <span>₹{formatPrice(finalTotal)}</span>
+              </div>
+
+            </div>
+
+            <Button
+              className="w-full mt-4"
+              size="lg"
+              disabled={placing}
+              onClick={handlePlaceOrder}
+            >
+              {placing ? "Processing Payment..." : "Pay with Razorpay"}
+            </Button>
+
           </div>
-
-          <div className="flex justify-between">
-            <span>Shipping</span>
-            <span>
-              {order.shipping === 0
-                ? "FREE"
-                : `₹${formatPrice(order.shipping)}`}
-            </span>
-          </div>
-
-          <div className="border-t pt-3 flex justify-between font-semibold text-base">
-            <span>Total Paid</span>
-            <span>₹{formatPrice(order.total)}</span>
-          </div>
-
-        </div>
-
-        {/* Buttons */}
-
-        <div className="flex gap-4 justify-center flex-wrap">
-
-          <Button
-            onClick={() => router.push("/")}
-          >
-            Continue Shopping
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={() => router.push("/account/orders")}
-          >
-            View My Orders
-          </Button>
 
         </div>
 
