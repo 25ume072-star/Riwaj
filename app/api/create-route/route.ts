@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
 export async function POST(req: Request) {
-
   try {
 
     const supabase = await createClient()
@@ -10,12 +9,27 @@ export async function POST(req: Request) {
 
     const { items, total, shipping } = body
 
+    /* VALIDATION */
+
+    if (!items || items.length === 0) {
+      return NextResponse.json(
+        { error: "Cart is empty" },
+        { status: 400 }
+      )
+    }
+
+    /* GET USER */
+
     const {
-      data: { user }
+      data: { user },
+      error: userError
     } = await supabase.auth.getUser()
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
     }
 
     /* CREATE ORDER */
@@ -32,16 +46,19 @@ export async function POST(req: Request) {
       .select()
       .single()
 
-    if (orderError) {
-      console.error(orderError)
-      return NextResponse.json({ error: orderError.message })
+    if (orderError || !order) {
+      console.error("Order creation error:", orderError)
+      return NextResponse.json(
+        { error: "Failed to create order" },
+        { status: 500 }
+      )
     }
 
     /* CREATE ORDER ITEMS */
 
     const orderItems = items.map((item: any) => ({
       order_id: order.id,
-      product_id: item.productId,   // IMPORTANT (UUID)
+      product_id: item.productId,   // MUST be UUID from products table
       quantity: item.quantity,
       price: item.price,
       size: item.size || null,
@@ -53,9 +70,15 @@ export async function POST(req: Request) {
       .insert(orderItems)
 
     if (itemError) {
-      console.error(itemError)
-      return NextResponse.json({ error: itemError.message })
+      console.error("Order items error:", itemError)
+
+      return NextResponse.json(
+        { error: "Failed to create order items" },
+        { status: 500 }
+      )
     }
+
+    /* SUCCESS */
 
     return NextResponse.json({
       success: true,
@@ -63,8 +86,11 @@ export async function POST(req: Request) {
     })
 
   } catch (err) {
-    console.error(err)
-    return NextResponse.json({ error: "Checkout failed" })
-  }
+    console.error("Checkout error:", err)
 
+    return NextResponse.json(
+      { error: "Checkout failed" },
+      { status: 500 }
+    )
+  }
 }
