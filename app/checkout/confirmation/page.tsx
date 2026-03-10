@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Navbar } from "@/components/navbar"
@@ -7,7 +8,7 @@ import { Footer } from "@/components/footer"
 import { CheckoutProgress } from "@/components/checkout-progress"
 import { Button } from "@/components/ui/button"
 
-export default function ConfirmationPage() {
+function ConfirmationContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get("orderId")
 
@@ -19,16 +20,20 @@ export default function ConfirmationPage() {
         <CheckoutProgress current="confirmation" />
 
         <h1 className="text-3xl md:text-4xl font-serif font-semibold">
-          Thank You for Your Order
+          Thank You for Your Order 🎉
         </h1>
 
         <p className="text-muted-foreground">
-          Your order has been placed successfully. We&apos;ll send you an email with the details shortly.
+          Your order has been placed successfully. We'll send you an email with the details shortly.
         </p>
 
-        {orderId && (
+        {orderId ? (
           <p className="text-sm text-muted-foreground">
             Order ID: <span className="font-mono">{orderId}</span>
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Processing your order details...
           </p>
         )}
 
@@ -38,6 +43,7 @@ export default function ConfirmationPage() {
               View Orders
             </Button>
           </Link>
+
           <Link href="/products">
             <Button>
               Continue Shopping
@@ -51,3 +57,10 @@ export default function ConfirmationPage() {
   )
 }
 
+export default function ConfirmationPage() {
+  return (
+    <Suspense fallback={<div className="p-10 text-center">Loading order confirmation...</div>}>
+      <ConfirmationContent />
+    </Suspense>
+  )
+}
