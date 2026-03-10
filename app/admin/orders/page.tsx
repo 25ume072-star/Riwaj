@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { CSSProperties } from "react";
 
 type OrderItem = {
   id: string;
@@ -37,13 +38,11 @@ export default function AdminOrdersPage() {
   const ADMIN_EMAIL = "storeriwaj@gmail.com";
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
-  // Check admin
   const checkAdmin = async () => {
     const { data } = await supabase.auth.getUser();
     setUserEmail(data.user?.email ?? null);
   };
 
-  // Fetch orders with items + product info
   const fetchOrders = async () => {
     const { data, error } = await supabase
       .from("orders")
@@ -93,6 +92,10 @@ export default function AdminOrdersPage() {
     );
   };
 
+  if (!userEmail) {
+    return <div style={{ padding: "40px" }}>Checking access...</div>;
+  }
+
   if (userEmail !== ADMIN_EMAIL) {
     return <div style={{ padding: "40px" }}>Not Authorized</div>;
   }
@@ -102,10 +105,8 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <div style={{ padding: "40px", maxWidth: "1100px", margin: "auto" }}>
-      <h1 style={{ fontSize: "30px", marginBottom: "20px" }}>
-        Orders Dashboard
-      </h1>
+    <div style={containerStyle}>
+      <h1 style={titleStyle}>Orders Dashboard</h1>
 
       <div style={tableStyle}>
         <div style={tableHeader}>
@@ -122,6 +123,7 @@ export default function AdminOrdersPage() {
             <div style={tableRow}>
               <span>#{order.id}</span>
               <span>₹{order.total ?? 0}</span>
+
               <span>
                 <select
                   value={order.status ?? "Pending"}
@@ -163,6 +165,7 @@ export default function AdminOrdersPage() {
                   <div key={item.id} style={itemRow}>
                     <img
                       src={item.products?.image_url ?? ""}
+                      alt={item.products?.name ?? "product"}
                       style={productImage}
                     />
 
@@ -189,13 +192,24 @@ export default function AdminOrdersPage() {
   );
 }
 
-const tableStyle = {
+const containerStyle: CSSProperties = {
+  padding: "40px",
+  maxWidth: "1100px",
+  margin: "auto",
+};
+
+const titleStyle: CSSProperties = {
+  fontSize: "30px",
+  marginBottom: "20px",
+};
+
+const tableStyle: CSSProperties = {
   border: "1px solid #ddd",
   borderRadius: "10px",
   overflow: "hidden",
 };
 
-const tableHeader = {
+const tableHeader: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr",
   background: "#f5f5f5",
@@ -203,7 +217,7 @@ const tableHeader = {
   fontWeight: "bold",
 };
 
-const tableRow = {
+const tableRow: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr",
   padding: "12px",
@@ -211,26 +225,26 @@ const tableRow = {
   alignItems: "center",
 };
 
-const orderDetails = {
+const orderDetails: CSSProperties = {
   padding: "20px",
   background: "#fafafa",
   borderTop: "1px solid #eee",
 };
 
-const itemRow = {
+const itemRow: CSSProperties = {
   display: "flex",
   gap: "15px",
   marginBottom: "15px",
 };
 
-const productImage = {
+const productImage: CSSProperties = {
   width: "80px",
   height: "80px",
   objectFit: "cover",
   borderRadius: "6px",
 };
 
-const viewButton = {
+const viewButton: CSSProperties = {
   background: "#2563eb",
   color: "#fff",
   border: "none",
