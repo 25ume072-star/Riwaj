@@ -38,46 +38,7 @@ export function Footer() {
   return (
     <footer className="bg-primary text-primary-foreground">
       <div className="container mx-auto px-4 py-16">
-        {/* Trust Strip */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-10 border-b border-primary-foreground/20">
-          <div className="flex items-center gap-3 justify-center md:justify-start">
-            <div className="w-9 h-9 rounded-full bg-primary-foreground/10 flex items-center justify-center">
-              <Truck className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Free shipping above ₹2,999</p>
-              <p className="text-xs text-primary-foreground/70">
-                Pan-India delivery on all orders
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 justify-center">
-            <div className="w-9 h-9 rounded-full bg-primary-foreground/10 flex items-center justify-center">
-              <RefreshCcw className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Easy exchanges</p>
-              <p className="text-xs text-primary-foreground/70">
-                Hassle-free 7‑day exchange policy
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 justify-center md:justify-end">
-            <div className="w-9 h-9 rounded-full bg-primary-foreground/10 flex items-center justify-center">
-              <Shield className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Secure payments</p>
-              <p className="text-xs text-primary-foreground/70">
-                Razorpay‑powered encrypted checkout
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 pt-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="space-y-5">
             <h2 className="text-3xl font-serif font-semibold tracking-wider">
