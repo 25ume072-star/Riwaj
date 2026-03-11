@@ -56,13 +56,17 @@ const { data, error } = await supabase
         user_id,
         total,
         created_at,
-        profiles(name,email,phone),
-        addresses!orders_address_id_fkey(
-          address_line1,
-          city,
-          state,
-          pincode
-        )
+        profiles:profiles!orders_user_id_fkey(
+        name,
+        email,
+        phone
+        ),
+        addresses:addresses!orders_address_id_fkey(
+        address_line1,
+        city,
+        state,
+        pincode
+      )
       `);
 
 
