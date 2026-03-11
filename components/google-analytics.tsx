@@ -1,54 +1,39 @@
 "use client"
 
-import Script from "next/script"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
 
 declare global {
   interface Window {
     dataLayer?: unknown[]
-    gtag?: (...args: any[]) => void
+    gtag?: (...args: unknown[]) => void
   }
 }
 
-interface GoogleAnalyticsProps {
-  measurementId: string
-}
-
-export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
+/**
+ * Sends page_view to GA4 on client-side route changes (SPA navigation).
+ * Initial page load is handled by GoogleAnalyticsScripts in the layout.
+ */
+export function GoogleAnalyticsRouteTracker() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const isFirst = useRef(true)
 
   useEffect(() => {
-    if (!measurementId) return
-    if (typeof window === "undefined") return
-    if (typeof window.gtag !== "function") return
+    if (typeof window === "undefined" || typeof window.gtag !== "function") return
+    if (isFirst.current) {
+      isFirst.current = false
+      return
+    }
 
-    const url = pathname + (searchParams?.toString() ? `?${searchParams}` : "")
+    const pagePath = pathname + (searchParams?.toString() ? `?${searchParams}` : "")
 
-    // SPA route change tracking
-    window.gtag("config", measurementId, {
-      page_path: url
+    window.gtag("event", "page_view", {
+      page_path: pagePath,
+      page_location: window.location.origin + pagePath
     })
-  }, [measurementId, pathname, searchParams])
+  }, [pathname, searchParams])
 
-  return (
-    <>
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}
-        strategy="afterInteractive"
-        async
-      />
-      <Script id="ga4-init" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          window.gtag = gtag;
-          gtag('js', new Date());
-          gtag('config', '${measurementId}');
-        `}
-      </Script>
-    </>
-  )
+  return null
 }
 

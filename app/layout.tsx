@@ -5,7 +5,8 @@ import { CartProvider } from "@/context/cart-context"
 import { CheckoutProvider } from "@/context/checkout-context"
 import { Toaster } from "sonner"
 import Script from "next/script";
-import { GoogleAnalytics } from "@/components/google-analytics"
+import { GoogleAnalyticsScripts } from "@/components/google-analytics-scripts"
+import { GoogleAnalyticsRouteTracker } from "@/components/google-analytics"
 import "./globals.css"
 
 
@@ -113,9 +114,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const gaMeasurementId =
-    process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "G-480LVGNKKT"
-
   return (
     <html lang="en" suppressHydrationWarning>
 
@@ -130,9 +128,8 @@ export default function RootLayout({
         `}
       >
 
-        {gaMeasurementId ? (
-          <GoogleAnalytics measurementId={gaMeasurementId} />
-        ) : null}
+        <GoogleAnalyticsScripts />
+        <GoogleAnalyticsRouteTracker />
 
         {/* Razorpay Checkout Script */}
         <Script
