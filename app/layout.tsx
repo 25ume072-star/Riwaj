@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { Cormorant_Garamond, Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/react"
 import { CartProvider } from "@/context/cart-context"
@@ -129,7 +130,9 @@ export default function RootLayout({
       >
 
         <GoogleAnalyticsScripts />
-        <GoogleAnalyticsRouteTracker />
+        <Suspense fallback={null}>
+          <GoogleAnalyticsRouteTracker />
+        </Suspense>
 
         {/* Razorpay Checkout Script */}
         <Script
