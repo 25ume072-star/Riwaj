@@ -148,17 +148,11 @@ return ( <div style={container}> <h1 style={title}>Customers</h1>
       <div key={customer.user_id}>
         <div style={tableRow}>
           <span>{customer.name ?? "Unknown"}</span>
-
           <span>{customer.email ?? "-"}</span>
-
           <span>{customer.phone ?? "-"}</span>
-
           <span>{customer.address ?? "-"}</span>
-
           <span>{customer.orders}</span>
-
           <span>₹{customer.totalSpent}</span>
-
           <span>
             {customer.lastOrder
               ? new Date(customer.lastOrder).toLocaleDateString()
@@ -181,7 +175,16 @@ return ( <div style={container}> <h1 style={title}>Customers</h1>
 
         {expandedCustomer === customer.user_id && (
           <div style={orderBox}>
-            <h3>Orders</h3>
+
+            <div style={customerCard}>
+              <h3>Customer Details</h3>
+              <p><strong>Name:</strong> {customer.name ?? "Unknown"}</p>
+              <p><strong>Email:</strong> {customer.email ?? "-"}</p>
+              <p><strong>Phone:</strong> {customer.phone ?? "-"}</p>
+              <p><strong>Address:</strong> {customer.address ?? "-"}</p>
+            </div>
+
+            <h3 style={{ marginTop: "15px" }}>Orders</h3>
 
             {orders
               .filter((o) => o.user_id === customer.user_id)
@@ -255,4 +258,12 @@ const orderRow: CSSProperties = {
 display: "flex",
 justifyContent: "space-between",
 marginBottom: "8px",
+};
+
+const customerCard: CSSProperties = {
+background: "#fff",
+padding: "12px",
+borderRadius: "8px",
+border: "1px solid #eee",
+marginBottom: "10px",
 };
