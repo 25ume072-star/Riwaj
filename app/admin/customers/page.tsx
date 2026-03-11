@@ -25,6 +25,7 @@ pincode: string | null;
 type Customer = {
 user_id: string;
 name: string | null;
+email: string | null;
 phone: string | null;
 address: string | null;
 orders: number;
@@ -55,12 +56,8 @@ const { data, error } = await supabase
         user_id,
         total,
         created_at,
-        profiles (
-          name,
-          email,
-          phone
-        ),
-        addresses (
+        profiles(name,email,phone),
+        addresses!orders_address_id_fkey(
           address_line1,
           city,
           state,
@@ -84,6 +81,7 @@ orderList.forEach((order) => {
     map.set(order.user_id, {
       user_id: order.user_id,
       name: order.profiles?.name ?? null,
+      email: order.profiles?.email ?? null,
       phone: order.profiles?.phone ?? null,
       address: order.addresses
         ? `${order.addresses.address_line1 ?? ""}, ${order.addresses.city ?? ""}, ${order.addresses.state ?? ""} ${order.addresses.pincode ?? ""}`
@@ -133,10 +131,11 @@ return <div style={{ padding: "40px" }}>Loading customers...</div>;
 
 return ( <div style={container}> <h1 style={title}>Customers</h1>
 
-
+```
   <div style={table}>
     <div style={tableHeader}>
       <span>Name</span>
+      <span>Email</span>
       <span>Phone</span>
       <span>Address</span>
       <span>Orders</span>
@@ -149,6 +148,8 @@ return ( <div style={container}> <h1 style={title}>Customers</h1>
       <div key={customer.user_id}>
         <div style={tableRow}>
           <span>{customer.name ?? "Unknown"}</span>
+
+          <span>{customer.email ?? "-"}</span>
 
           <span>{customer.phone ?? "-"}</span>
 
@@ -221,7 +222,7 @@ overflow: "hidden",
 
 const tableHeader: CSSProperties = {
 display: "grid",
-gridTemplateColumns: "1.5fr 1fr 2fr 1fr 1fr 1fr 1fr",
+gridTemplateColumns: "1fr 1.5fr 1fr 2fr 0.8fr 1fr 1fr 1fr",
 background: "#f5f5f5",
 padding: "12px",
 fontWeight: "bold",
@@ -229,7 +230,7 @@ fontWeight: "bold",
 
 const tableRow: CSSProperties = {
 display: "grid",
-gridTemplateColumns: "1.5fr 1fr 2fr 1fr 1fr 1fr 1fr",
+gridTemplateColumns: "1fr 1.5fr 1fr 2fr 0.8fr 1fr 1fr 1fr",
 padding: "12px",
 borderTop: "1px solid #eee",
 alignItems: "center",
