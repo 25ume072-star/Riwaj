@@ -52,22 +52,23 @@ setUserEmail(data.user?.email ?? null);
 const fetchCustomers = async () => {
 const { data, error } = await supabase
 .from("orders")
-.select(`         id,
-        user_id,
-        total,
-        created_at,
-        profiles:profiles!orders_user_id_fkey(
-        name,
-        email,
-        phone
-        ),
-        addresses:addresses!orders_address_id_fkey(
-        address_line1,
-        city,
-        state,
-        pincode
-      )
-      `);
+.select(`
+  id,
+  user_id,
+  total,
+  created_at,
+  profiles:profiles!orders_user_id_fkey(
+    name,
+    email,
+    phone
+  ),
+  addresses:addresses!orders_address_id_fkey(
+    address_line1,
+    city,
+    state,
+    pincode
+  )
+`)
 
 
 if (error) {
