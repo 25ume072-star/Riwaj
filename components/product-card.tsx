@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Heart, ShoppingBag, Star, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/context/cart-context"
@@ -16,9 +17,9 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
 
-  const [isHovered,setIsHovered] = useState(false)
-  const [isWishlisted,setIsWishlisted] = useState(false)
+  const [isWishlisted, setIsWishlisted] = useState(false)
 
+  const router = useRouter()
   const { addItem, user } = useCart()
 
   const supabase = createClient()
@@ -28,8 +29,12 @@ export function ProductCard({ product }: ProductCardProps) {
 
     await addItem(product)
 
-    toast.success("Added to cart 🛍️",{
-      description: product.name
+    toast.success("Added to cart", {
+      description: product.name,
+      action: {
+        label: "View cart",
+        onClick: () => router.push("/cart")
+      }
     })
   }
 
@@ -58,10 +63,10 @@ export function ProductCard({ product }: ProductCardProps) {
 
       const { data } = await supabase
         .from("wishlists")
-        .select("*")
+        .select("id")
         .eq("user_id", user.id)
         .eq("product_id", product.id)
-        .single()
+        .maybeSingle()
 
       if(data){
         setIsWishlisted(true)
@@ -82,7 +87,13 @@ export function ProductCard({ product }: ProductCardProps) {
     e.preventDefault()
 
     if(!user){
-      alert("Please login to use wishlist")
+      toast("Login required", {
+        description: "Sign in to save items to your wishlist.",
+        action: {
+          label: "Login",
+          onClick: () => router.push("/login")
+        }
+      })
       return
     }
 
@@ -95,6 +106,7 @@ export function ProductCard({ product }: ProductCardProps) {
         .eq("product_id", product.id)
 
       setIsWishlisted(false)
+      toast("Removed from wishlist", { description: product.name })
 
     } else {
 
@@ -106,6 +118,7 @@ export function ProductCard({ product }: ProductCardProps) {
         })
 
       setIsWishlisted(true)
+      toast("Saved to wishlist", { description: product.name })
 
     }
 
@@ -116,17 +129,21 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
 
     <div
-      className="group relative bg-card rounded-md overflow-hidden border border-border hover:shadow-xl transition-all duration-300"
-      onMouseEnter={()=>setIsHovered(true)}
-      onMouseLeave={()=>setIsHovered(false)}
+      className="group relative bg-card rounded-md overflow-hidden border border-border hover:shadow-xl transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/30"
     >
 
       {/* Image */}
 
-      <Link
-        href={`/products/${product.id}`}
-        className="block relative aspect-[3/4] overflow-hidden bg-muted"
-      >
+      <div className="relative aspect-[3/4] overflow-hidden bg-muted">
+        <Link
+          href={`/products/${product.id}`}
+          className="absolute inset-0 block"
+          aria-label={`View ${product.name}`}
+        >
+          <span className="sr-only">
+            View {product.name}
+          </span>
+        </Link>
 
         <Image
           src={imageUrl}
@@ -161,8 +178,8 @@ export function ProductCard({ product }: ProductCardProps) {
 
         <button
           onClick={toggleWishlist}
-          aria-label="Wishlist"
-          className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition"
+          aria-label={isWishlisted ? "Remove from wishlist" : "Save to wishlist"}
+          className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/85 hover:bg-white transition shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         >
 
           <Heart
@@ -180,16 +197,14 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Quick Actions */}
 
         <div
-          className={`
-            absolute bottom-0 left-0 right-0
+          className="
+            absolute bottom-0 left-0 right-0 z-10
             p-3 flex gap-2
             transition-all duration-300
-            ${
-              isHovered
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-4"
-            }
-          `}
+            opacity-100 translate-y-0
+            md:opacity-0 md:translate-y-4
+            md:group-hover:opacity-100 md:group-hover:translate-y-0
+          "
         >
 
           <Button
@@ -208,18 +223,21 @@ export function ProductCard({ product }: ProductCardProps) {
           <Button
             variant="secondary"
             size="icon"
-            asChild
+            onClick={(e) => {
+              e.preventDefault()
+              router.push(`/products/${product.id}`)
+            }}
+            aria-label="Quick view"
           >
-
-            <Link href={`/products/${product.id}`}>
-              <Eye className="h-4 w-4"/>
-            </Link>
+            <Eye className="h-4 w-4"/>
 
           </Button>
 
         </div>
 
-      </Link>
+        {/* Subtle overlay for contrast on hover */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      </div>
 
 
 
@@ -249,7 +267,7 @@ export function ProductCard({ product }: ProductCardProps) {
           <Star className="h-3.5 w-3.5 fill-secondary text-secondary"/>
 
           <span className="text-xs font-medium">
-            {product.rating}
+            {Number.isFinite(product.rating) ? product.rating : 0}
           </span>
 
           <span className="text-xs text-muted-foreground">
