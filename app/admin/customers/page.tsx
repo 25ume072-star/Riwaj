@@ -50,71 +50,73 @@ setUserEmail(data.user?.email ?? null);
 };
 
 const fetchCustomers = async () => {
-const { data, error } = await supabase
-.from("orders")
-.select(`
-  id,
-  user_id,
-  total,
-  created_at,
-  profiles:profiles!orders_user_id_fkey(
-    name,
-    email,
-    phone
-  ),
-  addresses:addresses!orders_address_id_fkey(
-    address_line1,
-    city,
-    state,
-    pincode
-  )
-`)
+  const { data: orderData, error } = await supabase
+    .from("orders")
+    .select("id,user_id,total,created_at,address_id");
 
-
-if (error) {
-  console.error(error);
-  return;
-}
-
-const orderList = (data as Order[]) || [];
-const map = new Map<string, Customer>();
-
-orderList.forEach((order) => {
-  if (!order.user_id) return;
-
-  if (!map.has(order.user_id)) {
-    map.set(order.user_id, {
-      user_id: order.user_id,
-      name: order.profiles?.name ?? null,
-      email: order.profiles?.email ?? null,
-      phone: order.profiles?.phone ?? null,
-      address: order.addresses
-        ? `${order.addresses.address_line1 ?? ""}, ${order.addresses.city ?? ""}, ${order.addresses.state ?? ""} ${order.addresses.pincode ?? ""}`
-        : null,
-      orders: 0,
-      totalSpent: 0,
-      lastOrder: null,
-    });
+  if (error) {
+    console.error(error);
+    return;
   }
 
-  const customer = map.get(order.user_id)!;
+  const orderList = orderData || [];
 
-  customer.orders += 1;
-  customer.totalSpent += order.total ?? 0;
+  const map = new Map<string, Customer>();
 
-  if (
-    !customer.lastOrder ||
-    new Date(order.created_at) > new Date(customer.lastOrder)
-  ) {
-    customer.lastOrder = order.created_at;
+  for (const order of orderList) {
+    if (!order.user_id) continue;
+
+    // get profile
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("name,email,phone")
+      .eq("id", order.user_id)
+      .single();
+
+    // get address
+    let addressText = null;
+
+    if (order.address_id) {
+      const { data: addr } = await supabase
+        .from("addresses")
+        .select("address_line1,city,state,pincode")
+        .eq("id", order.address_id)
+        .single();
+
+      if (addr) {
+        addressText = `${addr.address_line1 ?? ""}, ${addr.city ?? ""}, ${addr.state ?? ""} ${addr.pincode ?? ""}`;
+      }
+    }
+
+    if (!map.has(order.user_id)) {
+      map.set(order.user_id, {
+        user_id: order.user_id,
+        name: profile?.name ?? null,
+        email: profile?.email ?? null,
+        phone: profile?.phone ?? null,
+        address: addressText,
+        orders: 0,
+        totalSpent: 0,
+        lastOrder: null,
+      });
+    }
+
+    const customer = map.get(order.user_id)!;
+
+    customer.orders += 1;
+    customer.totalSpent += order.total ?? 0;
+
+    if (
+      !customer.lastOrder ||
+      new Date(order.created_at) > new Date(customer.lastOrder)
+    ) {
+      customer.lastOrder = order.created_at;
+    }
   }
-});
 
-setCustomers(Array.from(map.values()));
-setOrders(orderList);
-setLoading(false);
-
-
+  setCustomers(Array.from(map.values()));
+  setOrders(orderList);
+  setLoading(false);
 };
 
 useEffect(() => {
